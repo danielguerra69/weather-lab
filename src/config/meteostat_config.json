@@ -1,0 +1,6 @@
+{
+    "base_url": "https://bulk.meteostat.net/v2",
+    "stations_url": "https://bulk.meteostat.net/v2/stations/lite.json.gz",
+    "max_workers": 10,
+    "output_directory": "/tmp"
+}

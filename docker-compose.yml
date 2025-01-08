@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.6
+    container_name: weather-lab-elasticsearch
+    hostname: weather-lab-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.6
+    container_name: weather-lab-kibana
+    hostname: weather-lab-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://weather-lab-elasticsearch:9200
+    ports:
+      - "7777:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  weather-lab:
+    build: .
+    container_name: weather-lab
+    env_file:
+      - .env
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    volumes:
+      - weatherlab_tmp:/tmp
+    healthcheck:
+      test: ["CMD-SHELL", "bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  esdata:
+  weatherlab_tmp:

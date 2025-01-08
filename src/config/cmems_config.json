@@ -1,0 +1,6 @@
+{
+    "dataset_ids": [
+        "cmems_obs-ins_glo_phybgcwav_mynrt_na_irr"
+    ],
+    "output_directory": "/tmp"
+}

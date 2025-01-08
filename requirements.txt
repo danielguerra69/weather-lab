@@ -1,0 +1,10 @@
+requests
+elasticsearch
+copernicusmarine
+netCDF4
+numpy
+botocore
+pandas
+xmltodict
+pika
+datetime

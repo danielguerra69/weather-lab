@@ -43,6 +43,8 @@ class ElasticsearchStorage:
         actions = []
         for data in data_list:
             try:
+                if not isinstance(data['timestamp'], str):
+                    logging.error(f"Invalid timestamp format: {data['timestamp']}")
                 doc_id = f"{data['latitude']}-{data['longitude']}-{data['timestamp']}"
                 timestamp = datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
                 index_name = f"weather_data-{timestamp.strftime('%Y-%m-%d')}"
@@ -52,8 +54,12 @@ class ElasticsearchStorage:
                     "_source": data
                 }
                 actions.append(action)
-            except Exception as e:
+            except AttributeError as e:
                 logging.error(f"Error preparing data for bulk indexing: {e}")
+                logging.error(f"Problematic data: {data}")
+            except Exception as e:
+                logging.error(f"Unexpected error preparing data for bulk indexing: {e}")
+                logging.error(f"Problematic data: {data}")
 
         if actions:
             try:

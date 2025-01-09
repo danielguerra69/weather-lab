@@ -15,21 +15,32 @@ Weather Lab is a project that fetches weather data from various sources, process
    cd weather-lab
    ```
 
-2. **Build the Docker image**:
-   ```sh
-   docker build -t weather-lab-image .
+2. **Create a `.env` file in the root directory with the following content**:
+   ```env
+   CMEMS_USERNAME=your_cmems_username
+   CMEMS_PASSWORD=your_cmems_password
    ```
 
-3. **Run the setup script to create Docker secrets**:
+3. **Build the Docker image**:
+   ```sh
+   docker-compose build
+   ```
+
+4. **Run the setup script to create Docker secrets**:
    ```sh
    chmod +x bin/setup.sh
    ./bin/setup.sh
    ```
 
-4. **Start the Docker Compose services**:
+5. **Start the Docker Compose services**:
    ```sh
    docker-compose up
    ```
+
+6. **Import the Kibana configuration**:
+   - Open Kibana at `http://localhost:7777`
+   - Go to **Management** > **Stack Management** > **Saved Objects**
+   - Click **Import** and select the `kibana-config.ndjson` file from the repository
 
 ## Services
 
@@ -69,14 +80,8 @@ The Meteostat configuration file is located at `src/config/meteostat_config.json
 Create a `.env` file in the root directory with the following content:
 
 ```env
-DATABASE_URL=sqlite:///data.db
-ELASTICSEARCH_URL=http://localhost:9200
-RABBITMQ_URL=amqp://guest:guest@localhost/
-FLOWISEAI_URL=http://localhost:5000
 CMEMS_USERNAME=your_cmems_username
 CMEMS_PASSWORD=your_cmems_password
-METAR_DATA_URL=https://aviationweather.gov/data/cache/metars.cache.xml.gz
-SPACE_WEATHER_URL=https://services.swpc.noaa.gov/text/ace-magnetometer.txt
 ```
 
 ## Running Tests

@@ -1,7 +1,7 @@
 import unittest
 import os
 import json
-from src.main import WeatherLab
+from main import WeatherLab, AircraftDataSource
 from unittest.mock import MagicMock
 
 class TestWeatherLab(unittest.TestCase):
@@ -21,6 +21,11 @@ class TestWeatherLab(unittest.TestCase):
 
     def mock_index_data(self, data):
         print(json.dumps(data, indent=2))
+
+    def test_aircraft_data_source(self):
+        data_source = AircraftDataSource(config_path='src/config/aircraft_config.json', queue=MagicMock())
+        data = data_source.fetch_data()
+        self.assertIsNotNone(data)
 
 if __name__ == '__main__':
     unittest.main()

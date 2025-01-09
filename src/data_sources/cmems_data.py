@@ -100,7 +100,6 @@ class CmemsDataSource:
                         self.queue.put(result)
                     ds.close()
                     # Remove the file after processing
-                    
                     try:
                         os.remove(file_path)
                         logging.info(f"Removed file: {file_path}")
@@ -140,7 +139,7 @@ class CmemsDataSource:
                 except Exception as e:
                     logging.error(f"Error processing variable '{var_name}': {e}")
             return data, ds
-        except Exception as e:
+        except OSError as e:
             logging.error(f"Error converting NetCDF to dictionary: {e}")
             return None, None
 

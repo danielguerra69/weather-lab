@@ -70,8 +70,19 @@ class MeteostatDataSource:
         self.base_url = config.get("base_url", "https://bulk.meteostat.net/v2")
         self.stations_url = config.get("stations_url", f"{self.base_url}/stations/lite.json.gz")
         self.output_directory = config.get("output_directory", "/tmp")
-        self.inactive_stations = set()
+        self.inactive_stations_file = os.path.join(self.output_directory, "inactive_stations.json")
+        self.inactive_stations = self.load_inactive_stations()
         logging.basicConfig(level=logging.INFO)
+
+    def load_inactive_stations(self):
+        if os.path.exists(self.inactive_stations_file):
+            with open(self.inactive_stations_file, 'r') as f:
+                return set(json.load(f))
+        return set()
+
+    def save_inactive_stations(self):
+        with open(self.inactive_stations_file, 'w') as f:
+            json.dump(list(self.inactive_stations), f)
 
     def fetch_station_list(self):
         try:
@@ -169,6 +180,8 @@ class MeteostatDataSource:
                         self.queue.put(formatted_record)
             else:
                 logging.warning(f"Data unavailable for station {station['id']}")
+                self.inactive_stations.add(station['id'])
+                self.save_inactive_stations()
 
     def run(self):
         while True:

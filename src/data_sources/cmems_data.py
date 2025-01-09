@@ -33,7 +33,7 @@ class CmemsDataSource:
 
     def fetch_data(self):
         logging.debug("Logging in to Copernicus Marine")
-        cm.login(username=self.username, password=self.password)
+        cm.login(username=self.username, password=self.password, force_overwrite=True)
 
         logging.debug("Checking available CMEMS data")
         current_day = datetime.utcnow().strftime("%Y%m%d")
@@ -90,35 +90,28 @@ class CmemsDataSource:
         logging.info(f"Processing directory: {directory}")
         for root, _, files in os.walk(directory):
             for file in files:
-                file_path = os.path.join(root, file)
-                logging.info(f"Processing file: {file_path}")
-                data_dict, ds = self.netcdf_to_dict(file_path)
-                if data_dict and ds:
-                    translated_data = self.translator.translate(data_dict)
-                    combined_results = self.combine_measurements(translated_data, ds)
-                    for result in combined_results:
-                        self.queue.put(result)
-                    ds.close()
-                    # Remove the file after processing
-                    try:
-                        os.remove(file_path)
-                        logging.info(f"Removed file: {file_path}")
-                    except Exception as e:
-                        logging.error(f"Error removing file: {file_path}")
-                        logging.error(f"Exception: {e}")
+                if file.endswith('.nc'):
+                    file_path = os.path.join(root, file)
+                    logging.info(f"Processing file: {file_path}")
+                    data_dict, ds = self.netcdf_to_dict(file_path)
+                    if data_dict and ds:
+                        translated_data = self.translator.translate(data_dict)
+                        combined_results = self.combine_measurements(translated_data, ds)
+                        for result in combined_results:
+                            self.queue.put(result)
+                        ds.close()
+                        # Remove the file after processing
+                        try:
+                            os.remove(file_path)
+                            logging.info(f"Removed file: {file_path}")
+                        except Exception as e:
+                            logging.error(f"Error removing file: {file_path}")
+                            logging.error(f"Exception: {e}")
 
     def save_data(self, processed_data):
         # Implement the logic to save or return processed data
         logging.info("Saving data")
         # ...existing code...
-
-    def run(self):
-        while True:
-            try:
-                self.process_data(self.output_directory)
-                self.fetch_data()
-            except Exception as e:
-                logging.error(f"Error in run method: {e}")
 
     def netcdf_to_dict(self, file_path):
         logging.info(f"Converting NetCDF file to dictionary: {file_path}")
@@ -244,3 +237,11 @@ class CmemsDataSource:
                 return ''.join(cleaned_list)
             return cleaned_list
         return ""
+    
+    def run(self):
+        while True:
+            try:
+                self.process_data(self.output_directory)
+                self.fetch_data()
+            except Exception as e:
+                logging.error(f"Error in run method: {e}")

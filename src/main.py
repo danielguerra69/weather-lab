@@ -9,6 +9,7 @@ import threading
 import logging
 import json
 import time
+import asyncio
 
 class WeatherLab:
     def __init__(self, elasticsearch_storage=None):
@@ -21,12 +22,12 @@ class WeatherLab:
         
         self.elasticsearch_storage = elasticsearch_storage or ElasticsearchStorage(es_url='http://weather-lab-elasticsearch:9200')
         self.bulk_records = []
-        self.bulk_size = 500  # Reduce the bulk size
+        self.bulk_size = 1000
 
     def fetch_and_process_data(self, data_source):
         data_source.run()
 
-    def run(self):
+    async def run(self):
         threads = [
             threading.Thread(target=self.fetch_and_process_data, args=(self.cmems_data_source,)),
             threading.Thread(target=self.fetch_and_process_data, args=(self.metar_data_source,)),
@@ -45,12 +46,12 @@ class WeatherLab:
             # logging.info(f"Processing record: {record}")
             self.bulk_records.append(record)
             if len(self.bulk_records) >= self.bulk_size:
-                self.elasticsearch_storage.bulk_index_data(self.bulk_records)
+                await self.elasticsearch_storage.bulk_index_data(self.bulk_records)
                 self.bulk_records = []
 
         # Index any remaining records
         if self.bulk_records:
-            self.elasticsearch_storage.bulk_index_data(self.bulk_records)
+            await self.elasticsearch_storage.bulk_index_data(self.bulk_records)
 
         for thread in threads:
             thread.join()
@@ -59,4 +60,4 @@ class WeatherLab:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     weather_lab = WeatherLab()
-    weather_lab.run()
+    asyncio.run(weather_lab.run())

@@ -42,7 +42,8 @@ class AircraftDataSource:
                     'temp_c': aircraft_report.find('temp_c').text if aircraft_report.find('temp_c') is not None else None,
                     'turbulence_code': aircraft_report.find('turbulence_code').text if aircraft_report.find('turbulence_code') is not None else None,
                     'icing_code': aircraft_report.find('icing_code').text if aircraft_report.find('icing_code') is not None else None,
-                    'visibility_statute_mi': aircraft_report.find('visibility_statute_mi').text if aircraft_report.find('visibility_statute_mi') is not None else None
+                    'visibility_statute_mi': aircraft_report.find('visibility_statute_mi').text if aircraft_report.find('visibility_statute_mi') is not None else None,
+                    'aircraft_ref': aircraft_report.find('aircraft_ref').text if aircraft_report.find('aircraft_ref') is not None else None
                 }
                 translated_data = translate_row(row)
                 self.queue.put(translated_data)
@@ -53,6 +54,7 @@ class AircraftDataSource:
         while True:
             try:
                 raw_data = self.fetch_data()
+                print("Aircraft weather data fetched successfully.")
                 if raw_data:
                     self.parse_data(raw_data)
             except Exception as e:

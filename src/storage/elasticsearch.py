@@ -3,11 +3,14 @@ from datetime import datetime
 import time
 import json
 import logging
+import asyncio
+import concurrent.futures
 
 class ElasticsearchStorage:
-    def __init__(self, es_url, retry_delay=10):
+    def __init__(self, es_url, retry_delay=10, bulk_size=1000):
         self.es_url = es_url
         self.retry_delay = retry_delay
+        self.bulk_size = bulk_size
         self.es = None
         self.connect()
 
@@ -38,8 +41,12 @@ class ElasticsearchStorage:
         except Exception as e:
             logging.error(f"Error indexing data: {e}")
 
-    def bulk_index_data(self, data_list):
-        # logging.info("bulk_index_data method called")
+    async def bulk_index_data(self, data_list):
+        loop = asyncio.get_event_loop()
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            await loop.run_in_executor(pool, self._bulk_index_data_sync, data_list)
+
+    def _bulk_index_data_sync(self, data_list):
         actions = []
         for data in data_list:
             try:

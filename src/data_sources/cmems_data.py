@@ -113,11 +113,12 @@ class CmemsDataSource:
         # ...existing code...
 
     def run(self):
-        try:
-            self.process_data(self.output_directory)
-            self.fetch_data()
-        except Exception as e:
-            logging.error(f"Error in run method: {e}")
+        while True:
+            try:
+                self.process_data(self.output_directory)
+                self.fetch_data()
+            except Exception as e:
+                logging.error(f"Error in run method: {e}")
 
     def netcdf_to_dict(self, file_path):
         logging.info(f"Converting NetCDF file to dictionary: {file_path}")

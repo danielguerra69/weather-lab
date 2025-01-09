@@ -74,6 +74,7 @@ class MetarDataSource:
         while True:
             try:
                 raw_data = self.fetch_data()
+                print("METAR weather data fetched successfully.")
                 if raw_data:
                     self.parse_data(raw_data)
             except Exception as e:

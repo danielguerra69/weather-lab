@@ -38,6 +38,8 @@ def translate_row(row):
             except ValueError:
                 print(f"Error parsing {key}: {value}")
                 translated_row[key] = None
+        elif key == 'aircraft_ref':
+            translated_row['aircraft_ref'] = value
         else:
             try:
                 if isinstance(value, (int, float)):

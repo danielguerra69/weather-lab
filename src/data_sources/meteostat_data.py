@@ -129,7 +129,10 @@ class MeteostatDataSource:
             "latitude": station["location"]["latitude"],
             "longitude": station["location"]["longitude"],
             "timestamp": f"{record['date']}T{int(record['hour']):02d}:00:00Z",
-            "location": f"{station['location']['latitude']},{station['location']['longitude']}"
+            "location": f"{station['location']['latitude']},{station['location']['longitude']}",
+            "elevation": station["location"].get("elevation"),
+            "station_name": station["name"].get("en") or next(iter(station["name"].values())),
+            "country": station["country"]
         }
         optional_fields = ["temp","dewpt","rhum","precipitation","snow","wind_dir","wind_speed","wind_gust","pressure","tsun","coco"]
         for field in optional_fields:
@@ -172,11 +175,13 @@ class MeteostatDataSource:
 
         for station in stations:
             data = self.fetch_weather_data(station)
+            print(f"Meteostat file fetched successfully station {station['id']}.")
             if data:
                 for record in data:
                     formatted_record = self.format_record(station, record)
                     if formatted_record:
                         formatted_record["source"] = "meteostat"
+                        
                         self.queue.put(formatted_record)
             else:
                 logging.warning(f"Data unavailable for station {station['id']}")
@@ -186,3 +191,4 @@ class MeteostatDataSource:
     def run(self):
         while True:
             self.fetch_data()
+            print("Meteostat weather data fetched successfully.")

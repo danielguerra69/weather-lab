@@ -36,7 +36,6 @@ curl -XPUT "$ES_URL/_template/weather-lab-mapping-template" -H 'Content-Type: ap
           },
           "light_intensity": { "type": "float" },
           "conjunctions": {
-              "type": "nested",
               "properties": {
                   "planets": { "type": "keyword" },
                   "x": { "type": "float" },

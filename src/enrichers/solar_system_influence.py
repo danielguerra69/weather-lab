@@ -299,32 +299,32 @@ class SolarSystemInfluence:
                 }
 
                 # Check for conjunctions and adjust influence
+                conjunctions_combined = {
+                    "planets": [],
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "t": 0.0
+                }
                 conjunctions = self.check_conjunction(time, observer=location_topos, threshold=conjunction_threshold)
-                
-                # Create a list of conjunctions with planets field
-                influence_data['conjunctions'] = [
-                    {
-                        "planets": [
-                            self.output_names[self.planet_names.index(planet1)].capitalize(),
-                            self.output_names[self.planet_names.index(planet2)].capitalize()
-                        ],
-                        "x": float(influence_data[self.output_names[self.planet_names.index(planet1)]]['x'] + 
-                                   influence_data[self.output_names[self.planet_names.index(planet2)]]['x']),
-                        "y": float(influence_data[self.output_names[self.planet_names.index(planet1)]]['y'] + 
-                                   influence_data[self.output_names[self.planet_names.index(planet2)]]['y']),
-                        "z": float(influence_data[self.output_names[self.planet_names.index(planet1)]]['z'] + 
-                                   influence_data[self.output_names[self.planet_names.index(planet2)]]['z']),
-                        "t": float(np.linalg.norm([
-                            influence_data[self.output_names[self.planet_names.index(planet1)]]['x'] + 
-                            influence_data[self.output_names[self.planet_names.index(planet2)]]['x'],
-                            influence_data[self.output_names[self.planet_names.index(planet1)]]['y'] + 
-                            influence_data[self.output_names[self.planet_names.index(planet2)]]['y'],
-                            influence_data[self.output_names[self.planet_names.index(planet1)]]['z'] + 
-                            influence_data[self.output_names[self.planet_names.index(planet2)]]['z']
-                        ]))
-                    }
-                    for planet1, planet2 in conjunctions
-                ]
+                for planet1, planet2 in conjunctions:
+                    conjunctions_combined["planets"].append(f"{self.output_names[self.planet_names.index(planet1)].capitalize()}-"
+                                                            f"{self.output_names[self.planet_names.index(planet2)].capitalize()}")
+                    conjunctions_combined["x"] += float(influence_data[self.output_names[self.planet_names.index(planet1)]]['x'] +
+                                                        influence_data[self.output_names[self.planet_names.index(planet2)]]['x'])
+                    conjunctions_combined["y"] += float(influence_data[self.output_names[self.planet_names.index(planet1)]]['y'] +
+                                                        influence_data[self.output_names[self.planet_names.index(planet2)]]['y'])
+                    conjunctions_combined["z"] += float(influence_data[self.output_names[self.planet_names.index(planet1)]]['z'] +
+                                                        influence_data[self.output_names[self.planet_names.index(planet2)]]['z'])
+                    conjunctions_combined["t"] += float(np.linalg.norm([
+                        influence_data[self.output_names[self.planet_names.index(planet1)]]['x'] +
+                        influence_data[self.output_names[self.planet_names.index(planet2)]]['x'],
+                        influence_data[self.output_names[self.planet_names.index(planet1)]]['y'] +
+                        influence_data[self.output_names[self.planet_names.index(planet2)]]['y'],
+                        influence_data[self.output_names[self.planet_names.index(planet1)]]['z'] +
+                        influence_data[self.output_names[self.planet_names.index(planet2)]]['z']
+                    ]))
+                influence_data['conjunctions'] = conjunctions_combined
 
                 self.logger.debug(f"Influence data at location: {influence_data}")
                 

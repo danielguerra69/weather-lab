@@ -120,6 +120,9 @@ class CmemsDataSource:
                         except Exception as e:
                             logging.error(f"Error removing file: {file_path}")
                             logging.error(f"Exception: {e}")
+                    else:
+                        if ds:
+                            ds.close()
 
     def save_data(self, processed_data):
         # Implement the logic to save or return processed data

@@ -8,6 +8,7 @@ import math
 import os
 from datetime import datetime, timedelta
 from multiprocessing import Queue
+from enrichers.solar_system_influence import SolarSystemInfluence
 
 METEOSTAT_COCO_MAPPING = {
     0: "Clear",
@@ -72,7 +73,8 @@ class MeteostatDataSource:
         self.output_directory = config.get("output_directory", "/tmp")
         self.inactive_stations_file = os.path.join(self.output_directory, "inactive_stations.json")
         self.inactive_stations = self.load_inactive_stations()
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+        self.solar_system_influence = SolarSystemInfluence() 
 
     def load_inactive_stations(self):
         if os.path.exists(self.inactive_stations_file):
@@ -128,7 +130,7 @@ class MeteostatDataSource:
             "station_id": station["id"],
             "latitude": station["location"]["latitude"],
             "longitude": station["location"]["longitude"],
-            "timestamp": f"{record['date']}T{int(record['hour']):02d}:00:00Z",
+            "timestamp": f"{record['date']}T{int(record['hour']):02d}:00:00",
             "location": f"{station['location']['latitude']},{station['location']['longitude']}",
             "elevation": station["location"].get("elevation"),
             "station_name": station["name"].get("en") or next(iter(station["name"].values())),
@@ -175,13 +177,23 @@ class MeteostatDataSource:
 
         for station in stations:
             data = self.fetch_weather_data(station)
-            print(f"Meteostat file fetched successfully station {station['id']}.")
+            logging.info(f"Meteostat file fetched successfully station {station['id']}.")
             if data:
                 for record in data:
                     formatted_record = self.format_record(station, record)
                     if formatted_record:
                         formatted_record["source"] = "meteostat"
+                        # Set light_intensity
+
+                        light_intensity = self.solar_system_influence.get_light_intensity_at_location(formatted_record)
                         
+                        formatted_record["light_intensity"] = float(light_intensity)  # Ensure float
+
+                        logging.debug(f"Enriched record: {formatted_record}")
+
+                        # Add gravitational influence enrichment
+                        influence_data = self.solar_system_influence.get_influence_at_location(formatted_record)
+                        formatted_record.update(influence_data)
                         self.queue.put(formatted_record)
             else:
                 logging.warning(f"Data unavailable for station {station['id']}")
@@ -191,4 +203,4 @@ class MeteostatDataSource:
     def run(self):
         while True:
             self.fetch_data()
-            print("Meteostat weather data fetched successfully.")
+            logging.info("Meteostat weather data fetched successfully.")

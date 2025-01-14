@@ -1,3 +1,4 @@
+import logging
 import requests
 import gzip
 import io
@@ -7,6 +8,7 @@ from multiprocessing import Queue
 import json
 from translators.metar_translator import MetarTranslator
 import time
+from enrichers.solar_system_influence import SolarSystemInfluence
 
 class MetarDataSource:
     def __init__(self, config_path, queue: Queue):
@@ -15,6 +17,8 @@ class MetarDataSource:
         self.url = config['url']
         self.queue = queue
         self.translator = MetarTranslator()
+        self.solar_system_influence = SolarSystemInfluence()
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
     def fetch_data(self):
         response = requests.get(self.url)
@@ -53,10 +57,21 @@ class MetarDataSource:
                     "dewpoint": self.convert_to_float(metar.find('dewpoint_c').text) if metar.find('dewpoint_c') is not None else None,
                 }
                 translated_data = self.translator.translate(record)
-                translated_data["source"] = "metar"
+                # Set light_intensity
+
+                light_intensity = self.solar_system_influence.get_light_intensity_at_location(translated_data)
+                
+                translated_data["light_intensity"] = float(light_intensity)  # Ensure float
+
+                logging.debug(f"Enriched record: {translated_data}")
+
+                # Add gravitational influence enrichment
+                influence_data = self.solar_system_influence.get_influence_at_location(translated_data)
+                translated_data.update(influence_data)
+
                 self.queue.put(translated_data)
             except Exception as e:
-                print(f"Error parsing METAR data: {e}")
+                logging.debug(f"Error parsing METAR data: {e}")
 
     def convert_to_float(self, value):
         try:
@@ -74,9 +89,9 @@ class MetarDataSource:
         while True:
             try:
                 raw_data = self.fetch_data()
-                print("METAR weather data fetched successfully.")
+                logging.info("METAR weather data fetched successfully.")
                 if raw_data:
                     self.parse_data(raw_data)
             except Exception as e:
-                print(f"Error fetching or parsing METAR data: {e}")
+                logging.info(f"Error fetching or parsing METAR data: {e}")
             time.sleep(60)  # Wait for 60 seconds before fetching data again

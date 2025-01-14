@@ -1,3 +1,4 @@
+import logging
 import requests
 import gzip
 import csv
@@ -9,6 +10,7 @@ from translators.aircraft_translator import translate_row
 import io
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from enrichers.solar_system_influence import SolarSystemInfluence
 
 class AircraftDataSource:
     def __init__(self, config_path, queue: Queue):
@@ -16,6 +18,8 @@ class AircraftDataSource:
             config = json.load(config_file)
         self.url = config['base_url']
         self.queue = queue
+        self.solar_system_influence = SolarSystemInfluence()
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
     def fetch_data(self):
         response = requests.get(self.url)
@@ -46,17 +50,29 @@ class AircraftDataSource:
                     'aircraft_ref': aircraft_report.find('aircraft_ref').text if aircraft_report.find('aircraft_ref') is not None else None
                 }
                 translated_data = translate_row(row)
+                # Set light_intensity
+
+                light_intensity = self.solar_system_influence.get_light_intensity_at_location(translated_data)
+                
+                translated_data["light_intensity"] = float(light_intensity)  # Ensure float
+
+                logging.debug(f"Enriched record: {translated_data}")
+
+                # Add gravitational influence enrichment
+                influence_data = self.solar_system_influence.get_influence_at_location(translated_data)
+                translated_data.update(influence_data)
+
                 self.queue.put(translated_data)
             except Exception as e:
-                print(f"Error parsing aircraft data: {e}")
+                logging.debug(f"Error parsing aircraft data: {e}")
 
     def run(self):
         while True:
             try:
                 raw_data = self.fetch_data()
-                print("Aircraft weather data fetched successfully.")
+                logging.info("Aircraft weather data fetched successfully.")
                 if raw_data:
                     self.parse_data(raw_data)
             except Exception as e:
-                print(f"Error fetching or parsing aircraft data: {e}")
+                logging.info(f"Error fetching or parsing aircraft data: {e}")
             time.sleep(60)  # Wait for 60 seconds before fetching data again

@@ -58,6 +58,6 @@ class WeatherLab:
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
     weather_lab = WeatherLab()
     asyncio.run(weather_lab.run())

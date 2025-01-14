@@ -9,6 +9,7 @@ from botocore.exceptions import ClientError
 from multiprocessing import Queue
 import json
 from translators.cmems_translator import CmemsTranslator
+from enrichers.solar_system_influence import SolarSystemInfluence
 
 class CmemsDataSource:
     def __init__(self, config_path, queue: Queue):
@@ -25,7 +26,8 @@ class CmemsDataSource:
         self.output_directory = config['output_directory']
         self.queue = queue
         self.translator = CmemsTranslator()
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+        self.solar_system_influence = SolarSystemInfluence() 
 
     def read_secret(self, path):
         with open(path, 'r') as f:
@@ -98,6 +100,17 @@ class CmemsDataSource:
                         translated_data = self.translator.translate(data_dict)
                         combined_results = self.combine_measurements(translated_data, ds)
                         for result in combined_results:
+                            # Set light_intensity
+
+                            light_intensity = self.solar_system_influence.get_light_intensity_at_location(result)
+                            
+                            translated_data["light_intensity"] = float(light_intensity)  # Ensure float
+
+                            logging.debug(f"Enriched record: {result}")
+
+                            # Add gravitational influence enrichment
+                            influence_data = self.solar_system_influence.get_influence_at_location(result)
+                            result.update(influence_data)
                             self.queue.put(result)
                         ds.close()
                         # Remove the file after processing
@@ -123,15 +136,18 @@ class CmemsDataSource:
                     var_obj = ds.variables[var_name]
                     if not var_obj.dimensions or var_obj.size == 0:
                         continue
-                    if var_obj.ndim == 0:
-                        var_data = var_obj.item()
-                    else:
-                        var_data = var_obj[:]
-                    if np.isscalar(var_data):
-                        var_data = [var_data]
+                    var_data = var_obj[:]  # ...existing code...
+
+                    # Ensure numeric data is cast to float before cleaning
+                    if np.issubdtype(var_data.dtype, np.number):
+                        var_data = var_data.astype(float, copy=False)
+
+                    # ...existing code...
                     data[var_name] = self.clean_value_for_json(var_data, var_name)
                 except Exception as e:
                     logging.error(f"Error processing variable '{var_name}': {e}")
+                    # Skip or log corrupt variable
+                    continue
             return data, ds
         except OSError as e:
             logging.error(f"Error converting NetCDF to dictionary: {e}")
@@ -175,7 +191,7 @@ class CmemsDataSource:
                 try:
                     time_units = "days since 1950-01-01T00:00:00Z"  # Replace with actual time units from NetCDF file
                     time_base = datetime.strptime(time_units.split('since')[1].strip(), "%Y-%m-%dT%H:%M:%SZ")
-                    combined_result["timestamp"] = (time_base + timedelta(days=float(combined_result["timestamp"]))).isoformat() + "Z"
+                    combined_result["timestamp"] = (time_base + timedelta(days=float(combined_result["timestamp"]))).isoformat()
                 except ValueError as e:
                     logging.error(f"Error converting timestamp: {e}")
                     combined_result["timestamp"] = None

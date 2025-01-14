@@ -1,3 +1,4 @@
+import logging
 import requests
 import re
 from datetime import datetime
@@ -5,6 +6,7 @@ from multiprocessing import Queue
 import json
 from translators.space_weather_translator import SpaceWeatherTranslator
 import time
+from enrichers.solar_system_influence import SolarSystemInfluence
 
 class SpaceWeatherDataSource:
     def __init__(self, config_path, queue: Queue):
@@ -13,6 +15,8 @@ class SpaceWeatherDataSource:
         self.url = config['url']
         self.queue = queue
         self.translator = SpaceWeatherTranslator()
+        self.solar_system_influence = SolarSystemInfluence() 
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
     def fetch_data(self):
         response = requests.get(self.url)
@@ -32,11 +36,22 @@ class SpaceWeatherDataSource:
             try:
                 record = self.decode_space_weather_line(line)
                 translated_data = self.translator.translate(record)
-                translated_data["source"] = "space_weather"
+                # Set light_intensity
+
+                light_intensity = self.solar_system_influence.get_light_intensity_at_location(translated_data)
+                
+                translated_data["light_intensity"] = float(light_intensity)  # Ensure float
+
+                logging.debug(f"Enriched record: {translated_data}")
+
+                # Add gravitational influence enrichment
+                influence_data = self.solar_system_influence.get_influence_at_location(translated_data)
+                translated_data.update(influence_data)
+
                 self.queue.put(translated_data)
             except ValueError as ve:
-                print(f"Skipping line due to invalid data: {line}")
-                print(f"Exception: {ve}")
+                logging.debug(f"Skipping line due to invalid data: {line}")
+                logging.debug(f"Exception: {ve}")
 
     def decode_space_weather_line(self, line):
         line = re.sub(r'[ \t]+', ' ', line.strip())
@@ -70,9 +85,9 @@ class SpaceWeatherDataSource:
         while True:
             try:
                 raw_data = self.fetch_data()
-                print("Space weather data fetched successfully.")
+                logging.info("Space weather data fetched successfully.")
                 if raw_data:
                     self.parse_data(raw_data)
             except Exception as e:
-                print(f"Error fetching space weather data: {e}")
+                logging.info(f"Error fetching space weather data: {e}")
             time.sleep(60)  # Wait for 60 seconds before fetching data again
